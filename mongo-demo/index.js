@@ -17,26 +17,27 @@ const courseSchema = new mongoose.Schema({
   author: String,
   tags: {
     type: Array,
-    validate: {
-      validator: async function(v) {
-        return setTimeout(() => {
-          return (result = v && v.length > 0);
-        }, 1000);
-      },
-      message: "A course should have at least one tag.",
-    },
-    // The 'isAsync' parameter is deprecated!
     // validate: {
-    //   isAsync: true,
-    //   validator: function(v, callback) {
-    //     setTimeout(() => {
-    //       const result = v && v.length > 0;
-    //       callback(result);
+    //   validator: async function(v) {
+    //     return setTimeout(() => {
+    //       return (result = v && v.length > 0);
     //     }, 1000);
-    //     // Do some async work
     //   },
     //   message: "A course should have at least one tag.",
     // },
+    // The 'isAsync' parameter is deprecated!
+    // But it makes error handling simpler...
+    validate: {
+      isAsync: true,
+      validator: function(v, callback) {
+        setTimeout(() => {
+          const result = v && v.length > 0;
+          callback(result);
+        }, 1000);
+        // Do some async work
+      },
+      message: "A course should have at least one tag.",
+    },
   },
   date: { type: Date, default: Date.now },
   isPublished: Boolean,
@@ -54,8 +55,8 @@ async function createCourse() {
   const course = new Course({
     name: "Angular Course",
     author: "Mosh",
-    category: "web",
-    tags: ["angular", "frontend"],
+    category: "-",
+    // tags: ["angular", "frontend"],
     isPublished: true,
     price: 12,
   });
@@ -64,7 +65,7 @@ async function createCourse() {
     const result = await course.save();
     console.log(result);
   } catch (ex) {
-    console.log(ex.message);
+    for (field in ex.errors) console.log(ex.errors[field].message);
   }
 }
 
