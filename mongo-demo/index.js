@@ -6,11 +6,46 @@ mongoose
   .catch(err => console.error("Could not connect to MongoDB...", err));
 
 const courseSchema = new mongoose.Schema({
-  name: String,
+  // This validation is at the mongoose level, not mongodb
+  name: { type: String, required: true, minlength: 5, maxlength: 255 },
+  category: {
+    type: String,
+    require: true,
+    enum: ["web", "mobile", "network"],
+    // match: //
+  },
   author: String,
-  tags: [String],
+  tags: {
+    type: Array,
+    validate: {
+      validator: async function(v) {
+        return setTimeout(() => {
+          return (result = v && v.length > 0);
+        }, 1000);
+      },
+      message: "A course should have at least one tag.",
+    },
+    // The 'isAsync' parameter is deprecated!
+    // validate: {
+    //   isAsync: true,
+    //   validator: function(v, callback) {
+    //     setTimeout(() => {
+    //       const result = v && v.length > 0;
+    //       callback(result);
+    //     }, 1000);
+    //     // Do some async work
+    //   },
+    //   message: "A course should have at least one tag.",
+    // },
+  },
   date: { type: Date, default: Date.now },
   isPublished: Boolean,
+  price: {
+    type: Number,
+    required: function() {
+      return this.isPublished;
+    },
+  },
 });
 
 const Course = mongoose.model("Course", courseSchema);
@@ -19,12 +54,18 @@ async function createCourse() {
   const course = new Course({
     name: "Angular Course",
     author: "Mosh",
+    category: "web",
     tags: ["angular", "frontend"],
     isPublished: true,
+    price: 12,
   });
 
-  const result = await course.save();
-  console.log(result);
+  try {
+    const result = await course.save();
+    console.log(result);
+  } catch (ex) {
+    console.log(ex.message);
+  }
 }
 
 async function getCourses() {
@@ -56,12 +97,16 @@ async function updateCourse(id) {
     },
     { new: true }
   );
-
   console.log(course);
 }
 
+async function removeCourse(id) {
+  const result = await Course.deleteOne({ _id: id });
+  console.log(result);
+}
+
 async function run() {
-  await updateCourse("5ccaab61cd5a054e0d1033e9");
+  await createCourse();
 }
 
 run();
